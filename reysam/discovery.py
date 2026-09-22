@@ -83,22 +83,28 @@ def discover_tools(tools_directory):
             try:
                 module = load_module(tool_file)
 
-                if not is_valid_tool(module, category):
-                    continue
-
-                metadata = module.TOOL
-
-                discovered.append(
-                    Tool(
-                        name=metadata["name"],
-                        description=metadata["description"],
-                        category=metadata["category"],
-                        module=module,
-                        path=tool_file,
-                    )
+            except Exception as exc:
+                print(
+                    f"Warning: could not load {tool_file}"
                 )
-
-            except Exception:
+                print(
+                    f"         {type(exc).__name__}: {exc}"
+                )
                 continue
+
+            if not is_valid_tool(module, category):
+                continue
+
+            metadata = module.TOOL
+
+            discovered.append(
+                Tool(
+                    name=metadata["name"],
+                    description=metadata["description"],
+                    category=metadata["category"],
+                    module=module,
+                    path=tool_file,
+                )
+            )
 
     return discovered
