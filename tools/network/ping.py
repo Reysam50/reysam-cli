@@ -1,5 +1,5 @@
-import platform
 import subprocess
+
 
 TOOL = {
     "name": "ping",
@@ -8,12 +8,13 @@ TOOL = {
 }
 
 
-def main(args: list[str]) -> int:
-    if len(args) != 1:
+def main(args):
+    if not args:
         print("Usage: reysam network ping <host>")
-        return 2
+        return
 
     host = args[0]
-    count_flag = "-n" if platform.system().lower() == "windows" else "-c"
-    result = subprocess.run(["ping", count_flag, "4", host], check=False)
-    return result.returncode
+
+    subprocess.run(
+        ["ping", "-n", "4", host]
+    )

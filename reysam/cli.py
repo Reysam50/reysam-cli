@@ -1,48 +1,67 @@
 from __future__ import annotations
 
-import argparse
 import shlex
 import sys
 from pathlib import Path
 
-from .discovery import Tool, discover_tools
+from .discovery import discover_tools
+from .registry import ToolRegistry
 from .runner import run_tool
+from .tool import Tool
 
 
 def project_tools_dir() -> Path:
     """Return the tools directory bundled with the project."""
-    # During development this resolves to the repository's tools/ directory.
+
     return Path(__file__).resolve().parent.parent / "tools"
 
 
-def build_parser(tools: list[Tool]) -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        prog="reysam",
-        description="A modular personal CLI toolbox and tool runner.",
-    )
-    parser.add_argument("--list", action="store_true", help="List discovered tools.")
-    parser.add_argument("--interactive", "-i", action="store_true", help="Open interactive mode.")
-    return parser
+def print_tools(registry: ToolRegistry) -> None:
+    """Print all discovered tools grouped by category."""
 
+    tools = registry.all()
 
-def print_tools(tools: list[Tool]) -> None:
     if not tools:
         print("No tools discovered.")
         return
 
     categories: dict[str, list[Tool]] = {}
+
     for tool in tools:
         categories.setdefault(tool.category, []).append(tool)
 
     print("\nREYSAM TOOLBOX\n")
-    for category, category_tools in categories.items():
+
+    for category in sorted(categories):
         print(f"{category}/")
-        for tool in category_tools:
+
+        for tool in sorted(categories[category], key=lambda t: t.name):
             print(f"  {tool.name:<18} {tool.description}")
+
         print()
 
+def print_category(registry: ToolRegistry, category: str) -> None:
+    """Print all tools belonging to a category."""
 
-def interactive(tools: list[Tool]) -> int:
+    tools = registry.in_category(category)
+
+    if not tools:
+        print(f"Unknown category: {category}")
+        return
+
+    print(f"\n{category.upper()} TOOLS\n")
+
+    for tool in sorted(tools, key=lambda t: t.name):
+        print(f"  {tool.name:<18} {tool.description}")
+
+    print()
+
+
+def interactive(registry: ToolRegistry) -> int:
+    """Run Reysam in interactive mode."""
+
+    tools = registry.all()
+
     if not tools:
         print("No tools discovered.")
         return 1
@@ -50,11 +69,18 @@ def interactive(tools: list[Tool]) -> int:
     while True:
         print("\nREYSAM TOOLBOX")
         print("=" * 40)
+
         for index, tool in enumerate(tools, start=1):
-            print(f"{index:>2}. {tool.category}/{tool.name} - {tool.description}")
+            print(
+                f"{index:>2}. "
+                f"{tool.category}/{tool.name} - "
+                f"{tool.description}"
+            )
+
         print(" q. Quit")
 
         choice = input("\nSelect a tool: ").strip().lower()
+
         if choice == "q":
             return 0
 
@@ -66,6 +92,7 @@ def interactive(tools: list[Tool]) -> int:
             continue
 
         raw_args = input("Arguments (leave blank for none): ").strip()
+
         try:
             tool_args = shlex.split(raw_args)
         except ValueError as exc:
@@ -73,6 +100,7 @@ def interactive(tools: list[Tool]) -> int:
             continue
 
         print()
+
         try:
             code = run_tool(tool, tool_args)
         except Exception as exc:
@@ -84,29 +112,65 @@ def interactive(tools: list[Tool]) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
+
     tools = discover_tools(project_tools_dir())
+    registry = ToolRegistry(tools)
 
-    # Explicit interactive mode / no arguments.
-    if not argv or argv == ["-i"] or argv == ["--interactive"]:
-        return interactive(tools)
+    # No arguments → interactive mode.
+    if not argv:
+        return interactive(registry)
 
-    # Resolve direct command: reysam <category> <tool> [args...]
-    if argv[0] in {"--list", "-l"}:
-        print_tools(tools)
+    # Explicit interactive mode.
+    if argv in (["-i"], ["--interactive"]):
+        return interactive(registry)
+
+    # List discovered tools.
+    if argv in (["--list"], ["-l"]):
+        print_tools(registry)
         return 0
 
+    # Category command:
+    # reysam <category>
+    if len(argv) == 1:
+        category = argv[0]
+
+        if category in registry.categories():
+            print_category(registry, category)
+            return 0
+
+    # Direct command:
+    # reysam <category> <tool> [args...]
     if len(argv) >= 2:
         category, name, *tool_args = argv
-        matches = [t for t in tools if t.category == category and t.name == name]
-        if not matches:
-            print(f"Unknown tool: {category}/{name}", file=sys.stderr)
-            print("Use 'reysam --list' to see discovered tools.", file=sys.stderr)
-            return 2
-        return run_tool(matches[0], tool_args)
 
-    print("Usage: reysam <category> <tool> [args...]", file=sys.stderr)
-    print("       reysam --interactive", file=sys.stderr)
-    print("       reysam --list", file=sys.stderr)
+        tool = registry.get(category, name)
+
+        if tool is None:
+            print(
+                f"Unknown tool: {category}/{name}",
+                file=sys.stderr,
+            )
+            print(
+                "Use 'reysam --list' to see discovered tools.",
+                file=sys.stderr,
+            )
+            return 2
+
+        return run_tool(tool, tool_args)
+
+    print(
+        "Usage: reysam <category> <tool> [args...]",
+        file=sys.stderr,
+    )
+    print(
+        "       reysam --interactive",
+        file=sys.stderr,
+    )
+    print(
+        "       reysam --list",
+        file=sys.stderr,
+    )
+
     return 2
 
 

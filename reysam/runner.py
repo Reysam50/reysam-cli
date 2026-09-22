@@ -1,19 +1,12 @@
-from __future__ import annotations
-
-from typing import Sequence
-
-from .discovery import Tool
+from .tool import Tool
 
 
-def run_tool(tool: Tool, args: Sequence[str]) -> int:
-    """Run a discovered tool and return its exit code."""
-    result = tool.module.main(list(args))
+def run_tool(tool: Tool, args: list[str]) -> int:
+    """Run a Reysam tool with the supplied arguments."""
 
-    if result is None:
-        return 0
+    result = tool.module.main(args)
+
     if isinstance(result, int):
         return result
 
-    raise TypeError(
-        f"Tool '{tool.name}' returned {type(result).__name__}; expected int or None."
-    )
+    return 0
