@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "A modular personal CLI toolbox and tool runner."
 readme = "README.md"
 requires-python = ">=3.10"
-authors = [{name = "Reysam Mbughi"}]
+authors = [{name = "Lyson Reysam Mbughi"}]
 license = {text = "MIT"}
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -21,3 +21,6 @@ reysam = "reysam.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["reysam*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
