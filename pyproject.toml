@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "reysam"
+version = "0.1.0"
+description = "A modular personal CLI toolbox and tool runner."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{name = "Reysam Mbughi"}]
+license = {text = "MIT"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Environment :: Console",
+    "Operating System :: OS Independent",
+]
+
+[project.scripts]
+reysam = "reysam.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["reysam*"]
